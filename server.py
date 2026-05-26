@@ -84,11 +84,14 @@ def search_videos(query: str, semantic: bool = True, limit: int = 5) -> str:
         query_vector = embeddings.embed([query])[0]
         rows = conn.execute("""
             SELECT vc.chunk_id, vc.distance, c.video_id
-            FROM vec_chunks vc
+            FROM (
+                SELECT chunk_id, distance
+                FROM vec_chunks
+                WHERE embedding MATCH ?
+                ORDER BY distance
+                LIMIT ?
+            ) vc
             JOIN chunks c ON vc.chunk_id = c.id
-            WHERE vc.embedding MATCH ?
-            ORDER BY vc.distance
-            LIMIT ?
         """, (_serialize(query_vector), limit * 3)).fetchall()
 
         for row in rows:
@@ -135,13 +138,16 @@ def find_related(video_id: int, n: int = 5) -> str:
     query_vector = embeddings.embed([anchor["content"]])[0]
     rows = conn.execute("""
         SELECT vc.distance, c.video_id
-        FROM vec_chunks vc
+        FROM (
+            SELECT chunk_id, distance
+            FROM vec_chunks
+            WHERE embedding MATCH ?
+            ORDER BY distance
+            LIMIT ?
+        ) vc
         JOIN chunks c ON vc.chunk_id = c.id
-        WHERE vc.embedding MATCH ?
-        AND c.video_id != ?
-        ORDER BY vc.distance
-        LIMIT ?
-    """, (_serialize(query_vector), video_id, n * 3)).fetchall()
+        WHERE c.video_id != ?
+    """, (_serialize(query_vector), n * 3, video_id)).fetchall()
 
     seen_ids = set()
     related = []
@@ -170,11 +176,14 @@ def synthesize_across(theme: str, max_videos: int = 10) -> str:
     query_vector = embeddings.embed([theme])[0]
     rows = conn.execute("""
         SELECT vc.distance, c.video_id
-        FROM vec_chunks vc
+        FROM (
+            SELECT chunk_id, distance
+            FROM vec_chunks
+            WHERE embedding MATCH ?
+            ORDER BY distance
+            LIMIT ?
+        ) vc
         JOIN chunks c ON vc.chunk_id = c.id
-        WHERE vc.embedding MATCH ?
-        ORDER BY vc.distance
-        LIMIT ?
     """, (_serialize(query_vector), max_videos * 3)).fetchall()
 
     seen_ids = set()

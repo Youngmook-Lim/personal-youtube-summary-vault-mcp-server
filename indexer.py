@@ -1,7 +1,6 @@
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 import struct
 
@@ -34,7 +33,7 @@ def parse_file(file_path: Path) -> dict:
         "title": title,
         "channel": post.metadata.get("author"),
         "url": post.metadata.get("source"),
-        "published_at": str(post.metadata.get("date", "")),
+        "ingested_at": str(post.metadata.get("date", "")),
         "frontmatter_json": json.dumps(post.metadata, default=str),
         "summary_md": post.content,
         "tags": post.metadata.get("tags", []),
@@ -66,8 +65,6 @@ def chunk_text(text: str) -> list[str]:
 
 
 def ingest_file(conn, parsed: dict) -> str:
-    now = datetime.now(timezone.utc).isoformat()
-
     existing = conn.execute(
         "SELECT id, file_hash FROM videos WHERE file_path = ?",
         (parsed["file_path"],)
@@ -81,15 +78,15 @@ def ingest_file(conn, parsed: dict) -> str:
         conn.execute("DELETE FROM chunks WHERE video_id = ?", (video_id,))
         conn.execute("DELETE FROM tags WHERE video_id = ?", (video_id,))
         conn.execute("DELETE FROM fts_content WHERE video_id = ?", (video_id,))
-        conn.execute("UPDATE videos SET file_hash=?, title=?, channel=?, url=?, published_at=?, ingested_at=?, frontmatter_json=?, summary_md=? WHERE id=?",
+        conn.execute("UPDATE videos SET file_hash=?, title=?, channel=?, url=?, ingested_at=?, frontmatter_json=?, summary_md=? WHERE id=?",
             (parsed["file_hash"], parsed["title"], parsed["channel"], parsed["url"],
-             parsed["published_at"], now, parsed["frontmatter_json"], parsed["summary_md"], video_id))
+             parsed["ingested_at"], parsed["frontmatter_json"], parsed["summary_md"], video_id))
         status = "updated"
     else:
         cursor = conn.execute(
-            "INSERT INTO videos (file_path, file_hash, title, channel, url, published_at, ingested_at, frontmatter_json, summary_md) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO videos (file_path, file_hash, title, channel, url, ingested_at, frontmatter_json, summary_md) VALUES (?,?,?,?,?,?,?,?)",
             (parsed["file_path"], parsed["file_hash"], parsed["title"], parsed["channel"],
-             parsed["url"], parsed["published_at"], now, parsed["frontmatter_json"], parsed["summary_md"])
+             parsed["url"], parsed["ingested_at"], parsed["frontmatter_json"], parsed["summary_md"])
         )
         video_id = cursor.lastrowid
         status = "added"

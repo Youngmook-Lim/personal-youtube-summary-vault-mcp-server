@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 OBSIDIAN_REPO_PATH = Path(os.environ["OBSIDIAN_REPO_PATH"])
 VIDEOS_FOLDERS = [

@@ -23,7 +23,6 @@ def init_db() -> None:
             title           TEXT,
             channel         TEXT,
             url             TEXT,
-            published_at    TEXT,
             ingested_at     TEXT NOT NULL,
             frontmatter_json TEXT,
             summary_md      TEXT

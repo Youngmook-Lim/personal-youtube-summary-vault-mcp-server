@@ -1,5 +1,4 @@
 import struct
-from datetime import datetime, timezone, timedelta
 
 from mcp.server.fastmcp import FastMCP
 
@@ -34,7 +33,7 @@ def get_video(video_id: int) -> str:
         f"# {row['title']}\n\n"
         f"**Channel:** {row['channel']}\n"
         f"**URL:** {row['url']}\n"
-        f"**Published:** {row['published_at']}\n\n"
+        f"**Summarized:** {row['ingested_at']}\n\n"
         f"{row['summary_md']}"
     )
 
@@ -44,7 +43,7 @@ def list_recent(days: int = 14) -> str:
     """List videos ingested in the last N days."""
     conn = get_connection()
     rows = conn.execute("""
-        SELECT id, title, channel, published_at
+        SELECT id, title, channel, ingested_at
         FROM videos
         WHERE ingested_at >= datetime('now', ?)
         ORDER BY ingested_at DESC
@@ -52,7 +51,7 @@ def list_recent(days: int = 14) -> str:
     conn.close()
     if not rows:
         return f"No videos ingested in the last {days} days."
-    lines = [f"- [{r['id']}] **{r['title']}** — {r['channel']} ({r['published_at']})" for r in rows]
+    lines = [f"- [{r['id']}] **{r['title']}** — {r['channel']} ({r['ingested_at']})" for r in rows]
     return "\n".join(lines)
 
 
@@ -61,7 +60,7 @@ def suggest_forgotten(min_age_days: int = 30) -> str:
     """Suggest videos that were ingested a while ago — good for revisiting."""
     conn = get_connection()
     rows = conn.execute("""
-        SELECT id, title, channel, published_at
+        SELECT id, title, channel, ingested_at
         FROM videos
         WHERE ingested_at <= datetime('now', ?)
         ORDER BY RANDOM()
@@ -213,7 +212,7 @@ def video_resource(video_id: str) -> str:
         return f"No video found with id {video_id}."
     return (
         f"# {row['title']}\n\n"
-        f"**Channel:** {row['channel']} | **URL:** {row['url']} | **Published:** {row['published_at']}\n\n"
+        f"**Channel:** {row['channel']} | **URL:** {row['url']} | **Summarized:** {row['ingested_at']}\n\n"
         f"{row['summary_md']}"
     )
 
@@ -223,11 +222,11 @@ def recent_resource() -> str:
     """The 10 most recently ingested videos."""
     conn = get_connection()
     rows = conn.execute("""
-        SELECT id, title, channel, published_at
+        SELECT id, title, channel, ingested_at
         FROM videos ORDER BY ingested_at DESC LIMIT 10
     """).fetchall()
     conn.close()
-    lines = [f"- [{r['id']}] {r['title']} — {r['channel']} ({r['published_at']})" for r in rows]
+    lines = [f"- [{r['id']}] {r['title']} — {r['channel']} ({r['ingested_at']})" for r in rows]
     return "# Recently Ingested Videos\n\n" + "\n".join(lines)
 
 
